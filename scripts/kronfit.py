@@ -66,13 +66,13 @@ class KronFit:
                     adaptive_rate = learning_rate / (1.0 + abs(gradient[row, col]))
                     update = np.clip(adaptive_rate * gradient[row, col], -max_step, max_step)
                     old_value = self.init_matrix[row, col]
-                    self.init_matrix[row, col] += update
+                    self.init_matrix[row, col] -= update
                     print(
                         f"    {row * self.init_matrix.shape[1] + col}]  {self.init_matrix[row, col]:.6f}  <--  {old_value:.6f} +  {update:.6f}   Grad: {gradient[row, col]:.4f}   Rate: {adaptive_rate:.8f}")
 
             self.scale_initiator()
             current_log_likelihood = self.compute_log_likelihood()
-            print(f"  Current Log-Likelihood: {current_log_likelihood:.4f}")
+            print(f"  Current Log-Likelihood: {current_log_likelihood:.4f}\n")
 
             # Check for convergence using the change in log likelihood
             if abs(current_log_likelihood - prev_log_likelihood) < threshold:
@@ -97,7 +97,7 @@ class KronFit:
 
         end_time = time.time()
         print(f"Fitted parameters:\n{fitted_parameters}")  # Now should display the fitted matrix
-        print(f"Run Time: {end_time - start_time:.2f} seconds")
+        print(f"\nrun Time: {end_time - start_time:.2f} seconds")
 
 
 def main():
