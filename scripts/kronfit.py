@@ -2,6 +2,8 @@ import numpy as np
 import networkx as nx
 import random
 import time
+import argparse
+
 
 class KronFit:
     def __init__(self, graph, init_matrix, learning_rate, iterations, scale_matrix=True):
@@ -20,9 +22,6 @@ class KronFit:
         self.init_matrix *= scale_factor
         self.init_matrix /= np.max(self.init_matrix)  # Normalize to prevent overflow
         self.init_matrix = np.clip(self.init_matrix, 0, 1)  # Keep values in [0, 1]
-
-    def kronecker_product(self, A, B):
-        return np.kron(A, B)
 
     def compute_log_likelihood(self):
         likelihood = 0
@@ -102,11 +101,20 @@ class KronFit:
 
 
 def main():
-    G = nx.read_edgelist("../data/graph.txt", nodetype=int, create_using=nx.DiGraph())
-    init_matrix = np.array([[0.9, 0.7], [0.5, 0.2]])
-    learning_rate, iterations = 1e-5, 100
+    parser = argparse.ArgumentParser(description="Run Kronecker graph fitting.")
+    parser.add_argument("file_path", type=str, help="Path to the edge list file")
+    parser.add_argument("init_matrix", nargs=4, type=float,
+                        help="Four parameters for the initiator matrix as space-separated values")
+    parser.add_argument("iterations", type=int, help="Number of iterations for fitting the model")
+
+    args = parser.parse_args()
+
+    G = nx.read_edgelist(args.file_path, nodetype=int, create_using=nx.DiGraph())
+    init_matrix = np.array([[args.init_matrix[0], args.init_matrix[1]], [args.init_matrix[2], args.init_matrix[3]]])
+    learning_rate, iterations = 1e-5, args.iterations
     model = KronFit(G, init_matrix, learning_rate, iterations)
     model.fit()
+
 
 if __name__ == "__main__":
     main()
