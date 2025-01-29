@@ -103,10 +103,8 @@ class KronFit:
 def main():
     parser = argparse.ArgumentParser(description="Run Kronecker graph fitting.")
     parser.add_argument("file_path", type=str, help="Path to the edge list file")
-    parser.add_argument("init_matrix", nargs=4, type=float,
-                        help="Four parameters for the initiator matrix as space-separated values")
+    parser.add_argument("init_matrix", nargs=4, type=float,help="Four parameters for the initiator matrix seperated with space")
     parser.add_argument("iterations", type=int, help="Number of iterations for fitting the model")
-
     args = parser.parse_args()
 
     G = nx.read_edgelist(args.file_path, nodetype=int, create_using=nx.DiGraph())
