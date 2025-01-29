@@ -36,56 +36,47 @@ class KronFit:
                 likelihood += np.log(prob)
         return likelihood
 
-    def compute_gradient(self, learning_rate, min_step, max_step=0.05, warmup=10000, samples=100000):
-        # Initialize the gradient
+    def compute_gradient(self, samples=100000):
         gradient = np.zeros_like(self.init_matrix)
-
-        # Sample edges for gradient computation
         sampled_edges = random.sample(self.edges_list, min(samples, len(self.edges_list)))
 
-        # Compute gradient for each sampled edge
+        # Detailed trace data
+        grad_details = []
+
         for src, dst in sampled_edges:
             row = src % self.init_matrix.shape[0]
             col = dst % self.init_matrix.shape[1]
             prob = self.init_matrix[row, col]
 
             if prob > 0:
-                gradient[row, col] += 1 / prob
+                grad_contrib = 1 / prob
+                gradient[row, col] += grad_contrib
+                # Collect detailed gradient contribution data
+                grad_details.append((row, col, grad_contrib))
 
-        # Normalize the gradient
         gradient /= samples
-
-        # Scale the gradient using an adaptive learning rate
-        adaptive_rate = learning_rate / (1.0 + np.abs(gradient))
-        gradient = np.clip(gradient * adaptive_rate, -max_step, max_step)
-
-        # Re-scale the initiator matrix to preserve edge counts
-        self.scale_initiator()
-
-        return gradient
+        return gradient, grad_details
 
     def gradient_descent(self, learning_rate, min_step, max_step, warmup, samples):
-        # Apply a gradient descent step
         for i in range(self.iterations):
-            # Warm-up sampling (only print, not used)
-            if i == 0:
-                print(f"Warm-up: Sampling {warmup} edges")
+            print(f"{i + 1:03d}] SampleGradient: {samples} ({warmup} warm-up):")
 
-            # Compute the gradient
-            grad = self.compute_gradient(learning_rate, min_step, max_step, warmup, samples)
+            gradient, grad_details = self.compute_gradient(samples)
 
-            # Update the initiator matrix
-            self.init_matrix -= self.learning_rate * grad
+            for row in range(self.init_matrix.shape[0]):
+                for col in range(self.init_matrix.shape[1]):
+                    adaptive_rate = learning_rate / (1.0 + abs(gradient[row, col]))
+                    update = np.clip(adaptive_rate * gradient[row, col], -max_step, max_step)
+                    old_value = self.init_matrix[row, col]
+                    self.init_matrix[row, col] += update
+                    # Print each matrix element's gradient update details
+                    print(
+                        f"    {row * self.init_matrix.shape[1] + col}]  {self.init_matrix[row, col]:.6f}  <--  {old_value:.6f} +  {update:.6f}   Grad: {gradient[row, col]:.4f}   Rate: {adaptive_rate:.8f}")
 
-            # Compute log-likelihood
+            self.scale_initiator()
             log_likelihood = self.compute_log_likelihood()
+            print(f"  current Log-Likelihood.: {log_likelihood:.4f}")
 
-            # Print progress
-            print(f"Iteration {i + 1}/{self.iterations}")
-            print("Current matrix:\n", self.init_matrix)
-            print(f"Log-likelihood: {log_likelihood}\n")
-
-        # Return the optimized initiator matrix
         return self.init_matrix
 
     def fit(self):
