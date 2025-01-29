@@ -25,9 +25,6 @@ class KronFit:
         return np.kron(A, B)
 
     def compute_log_likelihood(self):
-        """
-        Compute the log-likelihood of the graph given the current Kronecker matrix.
-        """
         likelihood = 0
         for edge in self.edges_list:
             src, dst = edge
@@ -44,6 +41,7 @@ class KronFit:
         grad_details = []
 
         for src, dst in sampled_edges:
+            # mapping nodes from the graph onto the initiator matrix
             row = src % self.init_matrix.shape[0]
             col = dst % self.init_matrix.shape[1]
             prob = self.init_matrix[row, col]
@@ -57,9 +55,10 @@ class KronFit:
         gradient /= samples
         return gradient, grad_details
 
-    def gradient_descent(self, learning_rate, min_step, max_step, warmup, samples):
+    def gradient_descent(self, learning_rate, min_step, max_step, warmup, samples, threshold=1e-4):
+        prev_log_likelihood = -np.inf
         for i in range(self.iterations):
-            print(f"{i + 1:03d}] SampleGradient: {samples} ({warmup} warm-up):")
+            print(f"{i + 1:03d}] SampleGradient: {samples}:")
 
             gradient, grad_details = self.compute_gradient(samples)
 
@@ -69,13 +68,18 @@ class KronFit:
                     update = np.clip(adaptive_rate * gradient[row, col], -max_step, max_step)
                     old_value = self.init_matrix[row, col]
                     self.init_matrix[row, col] += update
-                    # Print each matrix element's gradient update details
                     print(
                         f"    {row * self.init_matrix.shape[1] + col}]  {self.init_matrix[row, col]:.6f}  <--  {old_value:.6f} +  {update:.6f}   Grad: {gradient[row, col]:.4f}   Rate: {adaptive_rate:.8f}")
 
             self.scale_initiator()
-            log_likelihood = self.compute_log_likelihood()
-            print(f"  current Log-Likelihood.: {log_likelihood:.4f}")
+            current_log_likelihood = self.compute_log_likelihood()
+            print(f"  Current Log-Likelihood: {current_log_likelihood:.4f}")
+
+            # Check for convergence using the change in log likelihood
+            if abs(current_log_likelihood - prev_log_likelihood) < threshold:
+                print("Convergence reached based on log likelihood.")
+                break
+            prev_log_likelihood = current_log_likelihood
 
         return self.init_matrix
 
